@@ -133,7 +133,7 @@ is tidied for display without changing the parsed value.
 | Trap | Page | Why it would mislead | Handling |
 |------|------|----------------------|----------|
 | `0708055F` | 92 | PE code looks like 708,055 | identifier → excluded by default |
-| `$250,000` / `$6,000,000` | 93 | dollar range in prose under a *thousands* banner → ×1000 = \$6B phantom | prose amounts are absolute → not scaled |
+| `$250,000` / `$6,000,000` | 93 | page 93 carries a *thousands* banner, so a naive scaler would multiply this prose range (×1000 → \$6B) | prose dollars are already absolute → kept at **×1** (as the raw-max provenance shows) |
 | `1,754,801` (Number of Receipts) | 29 | a **count** under a millions banner → 1.75-trillion phantom | count row → not scaled |
 | `35,110` (End Strength), Workyears, Items Managed | 13 / 29 | headcounts that would scale *above* the real winner | count rows → not scaled |
 | `($78.0M)`, `$234M` | 32 | magnitude already baked in → double-scaled to 1e12+ | inline magnitude wins, banner not re-applied |
