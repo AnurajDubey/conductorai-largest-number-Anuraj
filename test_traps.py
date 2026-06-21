@@ -58,6 +58,20 @@ def test_identifier_mode_does_not_change_the_winners():
     assert scl_d.value == scl_i.value == 30_704_100_000
 
 
+# --- Core feature: the happy path -------------------------------------------
+
+def test_basic_scale_arithmetic():
+    # The feature in its simplest form: a plain decimal in a "(Dollars in
+    # Millions)" table scales by 1e6, so 3.15 -> 3,150,000.  If this breaks,
+    # nothing else matters.
+    page = "(Dollars in Millions)\nTotal Revenue 3.15"
+    scale = fl.detect_scale(page)
+    assert scale.multiplier == 1_000_000 and scale.unit == "dollars"
+    cand = next(c for c in fl.iter_candidates(page, 1) if c.token == "3.15")
+    mult, _ = fl.resolve_multiplier(cand, scale)
+    assert cand.face * mult == 3_150_000
+
+
 # --- Documented traps -------------------------------------------------------
 
 def test_program_element_code_is_an_identifier():
@@ -106,8 +120,32 @@ def test_identifier_classification():
     # Identifiers: leading-zero code, long un-grouped run.
     assert is_id("0708055") and is_id("01234") and is_id("123456")
     # Values: fractional (incl. leading-zero decimals) and comma-grouped numbers.
+    # A well-formed amount like $1,234,567 is a VALUE, not an identifier.
     assert not is_id("0.5") and not is_id("0.000")
-    assert not is_id("6,000,000") and not is_id("30,704.1") and not is_id("2025")
+    assert not is_id("1,234,567") and not is_id("6,000,000")
+    assert not is_id("30,704.1") and not is_id("2025")
+
+
+def test_include_identifiers_is_policy_not_a_guard():
+    # The policy-vs-correctness distinction, made executable.  The flag only
+    # controls whether an identifier may COMPETE as a raw value; it never lets a
+    # dollar banner SCALE one.  Even under "(Dollars in Millions)", a leading-
+    # zero stock/PE code stays x1 (no 0708055 -> 708-billion phantom).
+    page = "(Dollars in Millions)\nStock Number 0708055"
+    scale = fl.detect_scale(page)
+    cand = next(c for c in fl.iter_candidates(page, 1) if "0708055" in c.token)
+    assert cand.is_identifier is True
+    assert fl.resolve_multiplier(cand, scale)[0] == 1
+
+
+def test_parenthetical_is_a_negative():
+    # Accounting parentheses are read as a NEGATIVE ("($98.1)" -> -98.1).  This
+    # is the safe convention for a maximum: it can only stop a value from
+    # winning, never invent a large one.  Asserted so the choice is explicit.
+    assert fl._parse_face("($98.1)") == -98.1
+    assert fl._parse_face("(302.3)") == -302.3
+    assert fl._parse_face("$234") == 234.0
+    assert fl._parse_face("30,704.1") == 30_704.1
 
 
 def test_no_phantom_above_one_trillion_in_either_mode():

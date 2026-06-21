@@ -67,7 +67,9 @@ python3 test_traps.py       # standalone, prints PASS/FAIL
 # or: pytest test_traps.py
 ```
 
-`test_traps.py` encodes each known trap (below) as an assertion, so the
+`test_traps.py` encodes the **core happy path** (a plain `3.15` under a
+millions banner → `3,150,000`), each **known trap** (below), and the **parse
+conventions** (e.g. accounting-negative parentheses) as assertions, so the
 correctness properties are explicit and re-checkable.
 
 ## Design
@@ -117,6 +119,14 @@ double-scaling, no scaling of non-dollar counts, no scaling of identifiers — a
 *correctness* properties that prevent reporting magnitudes the document never
 states. They stay **on in both modes**; the flag never disables them. (On this
 document both modes give the same two winners.)
+
+### Parsing conventions
+
+A value in **accounting parentheses is read as negative** (`(302.3)` → `-302.3`,
+`($78.0M)` → `-78,000,000`). For a *maximum* this is the safe reading: it can
+only keep a parenthesised value from winning, never invent a large one. A
+stray unbalanced parenthesis captured from sentence punctuation (`$6,000,000)`)
+is tidied for display without changing the parsed value.
 
 ### Traps handled (validation cases)
 
